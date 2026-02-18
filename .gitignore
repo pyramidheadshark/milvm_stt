@@ -1,0 +1,21 @@
+# Environment
+.env
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+
+# PyInstaller
+dist/
+build/
+*.spec
+
+# Runtime data
+transcripts/
+
+# OS
+.DS_Store
+Thumbs.db
