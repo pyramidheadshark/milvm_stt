@@ -6,7 +6,7 @@ import uvicorn
 
 from paths import TEMPLATES_DIR
 from config import HOST, PORT, SUPPORTED_FORMATS
-from services.storage import init_db, save_transcription, get_history, search_history, delete_transcription
+from services.storage import init_db, save_transcription, get_history, search_history, delete_transcription, save_failed_audio
 from services.transcriber import transcribe_audio
 
 
@@ -53,7 +53,8 @@ async def transcribe(file: UploadFile = File(...)):
     except ValueError as e:
         raise HTTPException(500, str(e))
     except RuntimeError as e:
-        raise HTTPException(502, str(e))
+        saved_path = await save_failed_audio(audio_bytes, filename)
+        raise HTTPException(502, f"{e} | Аудио сохранено: {saved_path}")
 
     record = await save_transcription(result["title"], result["text"], filename)
     return JSONResponse(record)

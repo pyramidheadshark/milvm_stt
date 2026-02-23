@@ -87,6 +87,17 @@ async def delete_transcription(record_id: int) -> bool:
         return True
 
 
+async def save_failed_audio(audio_bytes: bytes, filename: str) -> str:
+    os.makedirs(TRANSCRIPTS_DIR, exist_ok=True)
+    from datetime import datetime
+    ts   = datetime.now().strftime("%Y%m%d_%H%M%S")
+    name = f"FAILED_{ts}_{filename}"
+    path = os.path.join(TRANSCRIPTS_DIR, name)
+    with open(path, "wb") as f:
+        f.write(audio_bytes)
+    return path
+
+
 def _safe_name(name: str) -> str:
     safe = "".join(c if c.isalnum() or c in " -_" else "" for c in name)
     return safe.strip().replace(" ", "_")[:50]

@@ -125,7 +125,7 @@ def _shutdown() -> None:
     os._exit(0)
 
 
-def on_tray_open(icon, item):
+def on_tray_open(icon=None, item=None):
     if _window:
         _window.show()
 
@@ -177,7 +177,8 @@ def main() -> None:
         pystray.Menu.SEPARATOR,
         pystray.MenuItem("Exit", on_tray_exit),
     )
-    _icon = pystray.Icon(APP_TITLE, tray_image, APP_TITLE, menu)
+    _icon = pystray.Icon(APP_TITLE, tray_image, APP_TITLE, menu,
+                         on_activate=on_tray_open)
     if os.path.exists(ICON_ICO):
         try:
             _icon.icon = Image.open(ICON_ICO)
