@@ -1,6 +1,8 @@
-import aiosqlite
 import os
 from datetime import datetime
+
+import aiosqlite
+
 from paths import DB_PATH, TRANSCRIPTS_DIR
 
 
@@ -25,7 +27,7 @@ async def save_transcription(title: str, text: str, filename: str) -> dict:
     async with aiosqlite.connect(DB_PATH) as db:
         cursor = await db.execute(
             "INSERT INTO transcriptions (title, text, filename, created_at) VALUES (?, ?, ?, ?)",
-            (title, text, filename, created_at)
+            (title, text, filename, created_at),
         )
         await db.commit()
         record_id = cursor.lastrowid
@@ -50,9 +52,7 @@ async def save_transcription(title: str, text: str, filename: str) -> dict:
 async def get_history(limit: int = 200) -> list[dict]:
     async with aiosqlite.connect(DB_PATH) as db:
         db.row_factory = aiosqlite.Row
-        cursor = await db.execute(
-            "SELECT * FROM transcriptions ORDER BY id DESC LIMIT ?", (limit,)
-        )
+        cursor = await db.execute("SELECT * FROM transcriptions ORDER BY id DESC LIMIT ?", (limit,))
         rows = await cursor.fetchall()
         return [dict(row) for row in rows]
 
@@ -63,7 +63,7 @@ async def search_history(query: str, limit: int = 200) -> list[dict]:
         like = f"%{query}%"
         cursor = await db.execute(
             "SELECT * FROM transcriptions WHERE title LIKE ? OR text LIKE ? ORDER BY id DESC LIMIT ?",
-            (like, like, limit)
+            (like, like, limit),
         )
         rows = await cursor.fetchall()
         return [dict(row) for row in rows]
@@ -71,9 +71,7 @@ async def search_history(query: str, limit: int = 200) -> list[dict]:
 
 async def delete_transcription(record_id: int) -> bool:
     async with aiosqlite.connect(DB_PATH) as db:
-        cursor = await db.execute(
-            "SELECT title FROM transcriptions WHERE id = ?", (record_id,)
-        )
+        cursor = await db.execute("SELECT title FROM transcriptions WHERE id = ?", (record_id,))
         row = await cursor.fetchone()
         if not row:
             return False
@@ -90,7 +88,8 @@ async def delete_transcription(record_id: int) -> bool:
 async def save_failed_audio(audio_bytes: bytes, filename: str) -> str:
     os.makedirs(TRANSCRIPTS_DIR, exist_ok=True)
     from datetime import datetime
-    ts   = datetime.now().strftime("%Y%m%d_%H%M%S")
+
+    ts = datetime.now().strftime("%Y%m%d_%H%M%S")
     name = f"FAILED_{ts}_{filename}"
     path = os.path.join(TRANSCRIPTS_DIR, name)
     with open(path, "wb") as f:

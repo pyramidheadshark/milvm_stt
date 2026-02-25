@@ -1,12 +1,20 @@
-from fastapi import FastAPI, Request, UploadFile, File, HTTPException, Query
+from contextlib import asynccontextmanager
+
+import uvicorn
+from fastapi import FastAPI, File, HTTPException, Query, Request, UploadFile
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
-from contextlib import asynccontextmanager
-import uvicorn
 
-from paths import TEMPLATES_DIR
 from config import HOST, PORT, SUPPORTED_FORMATS
-from services.storage import init_db, save_transcription, get_history, search_history, delete_transcription, save_failed_audio
+from paths import TEMPLATES_DIR
+from services.storage import (
+    delete_transcription,
+    get_history,
+    init_db,
+    save_failed_audio,
+    save_transcription,
+    search_history,
+)
 from services.transcriber import transcribe_audio
 
 
@@ -19,18 +27,18 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="Voice Transcriber", lifespan=lifespan)
 templates = Jinja2Templates(directory=TEMPLATES_DIR)
 
-MAX_FILE_SIZE_MB    = 25
+MAX_FILE_SIZE_MB = 25
 MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024
 
 
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request):
     history = await get_history()
-    return templates.TemplateResponse("index.html", {"request": request, "history": history})
+    return templates.TemplateResponse(request, "index.html", {"history": history})
 
 
 @app.post("/transcribe")
-async def transcribe(file: UploadFile = File(...)):
+async def transcribe(file: UploadFile = File(...)):  # noqa: B008
     audio_bytes = await file.read()
 
     if len(audio_bytes) > MAX_FILE_SIZE_BYTES:
@@ -40,7 +48,7 @@ async def transcribe(file: UploadFile = File(...)):
         raise HTTPException(400, "Empty file received")
 
     content_type = file.content_type or "audio/ogg"
-    filename     = file.filename or "recording.ogg"
+    filename = file.filename or "recording.ogg"
 
     base_ct = content_type.split(";")[0].strip()
     if base_ct not in SUPPORTED_FORMATS and not any(
@@ -51,10 +59,10 @@ async def transcribe(file: UploadFile = File(...)):
     try:
         result = await transcribe_audio(audio_bytes, content_type, filename)
     except ValueError as e:
-        raise HTTPException(500, str(e))
+        raise HTTPException(500, str(e)) from e
     except RuntimeError as e:
         saved_path = await save_failed_audio(audio_bytes, filename)
-        raise HTTPException(502, f"{e} | Аудио сохранено: {saved_path}")
+        raise HTTPException(502, f"{e} | Аудио сохранено: {saved_path}") from e
 
     record = await save_transcription(result["title"], result["text"], filename)
     return JSONResponse(record)
