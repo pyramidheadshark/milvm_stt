@@ -22,7 +22,7 @@ Desktop tray-приложение для транскрибации голосо
 - [ ] Phase 5: CI/CD
 - [ ] Phase 6: Deploy
 
-**Active phase**: Phase 3 — Архитектурные правки + UI/UX улучшения
+**Active phase**: Phase 4 — UI/UX улучшения
 
 ---
 
@@ -30,12 +30,10 @@ Desktop tray-приложение для транскрибации голосо
 
 Tasks in priority order. Check off when done.
 
-- [ ] Phase 3: HOST 0.0.0.0 → 127.0.0.1 в config.py (P1)
-- [ ] Phase 3: PORT/HOST в tray.py — импортировать из config вместо дублирования (P1)
-- [ ] Phase 3: валидация OPENROUTER_API_KEY при старте приложения (P1)
-- [ ] Phase 4: UI/UX улучшения (обсудить отдельно)
+- [ ] Phase 4: UI/UX улучшения (обсудить с пользователем)
 
 **Completed (most recent first):**
+- [x] Phase 3: validate_config, PORT fix in tray, mypy clean, 45/45 тестов — cda1bb9 — 2026-03-06
 - [x] Phase 1: CI исправлен, тесты 42/42, coverage 87.8%, ruff+mypy чистые — ec002aa — 2026-03-06
 - [x] Phase 0: cleanup — удалены битые артефакты, зафиксированы .github/ и dev/ — e67691b — 2026-03-06
 - [x] feat: v0.3.0 — tray app, pywebview, retry logic, save failed audio — 858d1a7

@@ -10,10 +10,10 @@ import uvicorn
 import webview
 from PIL import Image
 
+from config import PORT, validate_config
 from paths import ASSETS_DIR
 
 APP_TITLE = "Voice Transcriber"
-PORT = int(os.getenv("PORT", "8000"))
 HOST = "127.0.0.1"
 WIN_W = 420
 WIN_H = 680
@@ -45,9 +45,14 @@ def _set_window_pos(x: int, y: int, w: int, h: int) -> None:
         SWP_NOACTIVATE = 0x0010
         ctypes.windll.user32.SetWindowPos(_hwnd, 0, x, y, w, h, SWP_NOZORDER | SWP_NOACTIVATE)
     elif _window:
-        threading.Thread(
-            target=lambda: (_window.resize(w, h), time.sleep(0.1), _window.move(x, y)), daemon=True
-        ).start()
+        win = _window
+
+        def _reposition() -> None:
+            win.resize(w, h)
+            time.sleep(0.1)
+            win.move(x, y)
+
+        threading.Thread(target=_reposition, daemon=True).start()
 
 
 def _anchor(window: webview.Window) -> None:
@@ -75,7 +80,7 @@ def _anchor(window: webview.Window) -> None:
 
 def _load_tray_icon() -> Image.Image:
     if os.path.exists(ICON_PNG):
-        return Image.open(ICON_PNG).convert("RGBA").resize((64, 64), Image.LANCZOS)
+        return Image.open(ICON_PNG).convert("RGBA").resize((64, 64), Image.LANCZOS)  # type: ignore[attr-defined]
     from PIL import ImageDraw
 
     img = Image.new("RGBA", (64, 64), (0, 0, 0, 0))
@@ -135,12 +140,19 @@ def on_tray_exit(icon, item):
 
 
 def on_window_closing() -> bool:
+    assert _window is not None
     threading.Thread(target=_window.hide, daemon=True).start()
     return False
 
 
 def main() -> None:
     global _window, _icon
+
+    try:
+        validate_config()
+    except RuntimeError as e:
+        print(f"ERROR: {e}", file=sys.stderr)
+        os._exit(1)
 
     port = _find_free_port(PORT)
     url = f"http://{HOST}:{port}/?mode=app"
@@ -164,6 +176,7 @@ def main() -> None:
         shadow=True,
         js_api=WindowApi(),
     )
+    assert _window is not None
     _window.events.closing += on_window_closing
 
     tray_image = _load_tray_icon()

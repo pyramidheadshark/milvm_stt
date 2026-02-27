@@ -5,7 +5,7 @@ from fastapi import FastAPI, File, HTTPException, Query, Request, UploadFile
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 
-from config import HOST, PORT, SUPPORTED_FORMATS
+from config import HOST, PORT, SUPPORTED_FORMATS, validate_config
 from paths import TEMPLATES_DIR
 from services.storage import (
     delete_transcription,
@@ -20,7 +20,13 @@ from services.transcriber import transcribe_audio
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    import logging
+
     await init_db()
+    try:
+        validate_config()
+    except RuntimeError as e:
+        logging.warning("Config warning: %s", e)
     yield
 
 

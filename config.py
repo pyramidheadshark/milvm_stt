@@ -34,6 +34,17 @@ TEXT: <транскрибация>
 TITLE: <заголовок на русском>
 TEXT: <транскрибация>"""
 
+_REQUIRED = {"OPENROUTER_API_KEY": OPENROUTER_API_KEY}
+
+
+def validate_config() -> None:
+    missing = [k for k, v in _REQUIRED.items() if not v]
+    if missing:
+        raise RuntimeError(
+            f"Missing required env vars: {', '.join(missing)}. Check your .env file."
+        )
+
+
 SUPPORTED_FORMATS = {
     "audio/ogg": "ogg",
     "audio/mpeg": "mp3",
