@@ -10,7 +10,7 @@ import uvicorn
 import webview
 from PIL import Image
 
-from config import PORT, validate_config
+from config import PORT
 from paths import ASSETS_DIR
 
 APP_TITLE = "Voice Transcriber"
@@ -55,7 +55,7 @@ def _set_window_pos(x: int, y: int, w: int, h: int) -> None:
         threading.Thread(target=_reposition, daemon=True).start()
 
 
-def _anchor(window: webview.Window) -> None:
+def _anchor() -> None:
     global _screen_w, _screen_h, _hwnd
 
     time.sleep(0.15)
@@ -147,12 +147,6 @@ def on_window_closing() -> bool:
 
 def main() -> None:
     global _window, _icon
-
-    try:
-        validate_config()
-    except RuntimeError as e:
-        print(f"ERROR: {e}", file=sys.stderr)
-        os._exit(1)
 
     port = _find_free_port(PORT)
     url = f"http://{HOST}:{port}/?mode=app"

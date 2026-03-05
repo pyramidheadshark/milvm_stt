@@ -129,7 +129,7 @@ async def _call_api(audio_b64: str, audio_format: str) -> str:
 
 async def transcribe_audio(audio_bytes: bytes, content_type: str, filename: str) -> dict:
     if not config.OPENROUTER_API_KEY:
-        raise ValueError("OPENROUTER_API_KEY не задан в .env")
+        raise ValueError("OPENROUTER_API_KEY не задан. Откройте настройки (⚙) и введите ключ.")
 
     audio_format = _detect_format(content_type, filename)
     audio_b64 = base64.b64encode(audio_bytes).decode("utf-8")

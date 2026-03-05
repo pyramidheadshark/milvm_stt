@@ -1,4 +1,17 @@
-from services.transcriber import _clean_text, _detect_format, _parse_response, _strip_markdown
+import base64
+from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
+
+from services.transcriber import (
+    RETRY_ATTEMPTS,
+    _call_api,
+    _clean_text,
+    _detect_format,
+    _parse_response,
+    _strip_markdown,
+    transcribe_audio,
+)
 
 
 class TestStripMarkdown:
@@ -147,3 +160,149 @@ class TestCleanText:
     def test_clean_text_unchanged(self):
         text = "Просто обычный текст без артефактов."
         assert _clean_text(text) == text
+
+
+def _make_httpx_mock(
+    status_code: int = 200, content: str = "TITLE: T\nTEXT: X", response_text: str = ""
+):
+    mock_response = MagicMock()
+    mock_response.status_code = status_code
+    mock_response.json.return_value = {"choices": [{"message": {"content": content}}]}
+    mock_response.text = response_text or content
+    mock_post = AsyncMock(return_value=mock_response)
+
+    mock_client = AsyncMock()
+    mock_client.post = mock_post
+
+    mock_client_cls = MagicMock()
+    mock_client_cls.return_value.__aenter__ = AsyncMock(return_value=mock_client)
+    mock_client_cls.return_value.__aexit__ = AsyncMock(return_value=False)
+
+    return mock_client_cls, mock_post
+
+
+class TestCallApi:
+    async def test_returns_content_on_200(self):
+        mock_cls, _ = _make_httpx_mock(content="TITLE: Result\nTEXT: Body")
+        with patch("services.transcriber.httpx.AsyncClient", mock_cls):
+            result = await _call_api("b64data", "ogg")
+        assert result == "TITLE: Result\nTEXT: Body"
+
+    async def test_sends_authorization_header(self):
+        mock_cls, mock_post = _make_httpx_mock()
+        with (
+            patch("services.transcriber.httpx.AsyncClient", mock_cls),
+            patch("services.transcriber.config.OPENROUTER_API_KEY", "sk-test-key"),
+        ):
+            await _call_api("b64data", "ogg")
+        headers = mock_post.call_args.kwargs["headers"]
+        assert headers["Authorization"] == "Bearer sk-test-key"
+
+    async def test_sends_model_from_config(self):
+        mock_cls, mock_post = _make_httpx_mock()
+        with (
+            patch("services.transcriber.httpx.AsyncClient", mock_cls),
+            patch("services.transcriber.config.MODEL", "custom/model-xyz"),
+        ):
+            await _call_api("b64data", "ogg")
+        payload = mock_post.call_args.kwargs["json"]
+        assert payload["model"] == "custom/model-xyz"
+
+    async def test_sends_audio_b64_and_format_in_payload(self):
+        mock_cls, mock_post = _make_httpx_mock()
+        with patch("services.transcriber.httpx.AsyncClient", mock_cls):
+            await _call_api("myaudiodata==", "webm")
+        payload = mock_post.call_args.kwargs["json"]
+        audio_part = payload["messages"][0]["content"][1]
+        assert audio_part["type"] == "input_audio"
+        assert audio_part["input_audio"]["data"] == "myaudiodata=="
+        assert audio_part["input_audio"]["format"] == "webm"
+
+    async def test_raises_runtime_error_on_non_200(self):
+        mock_cls, _ = _make_httpx_mock(status_code=429, response_text="Rate limit exceeded")
+        with (
+            patch("services.transcriber.httpx.AsyncClient", mock_cls),
+            pytest.raises(RuntimeError, match="429"),
+        ):
+            await _call_api("b64data", "ogg")
+
+    async def test_raises_on_500_with_text(self):
+        mock_cls, _ = _make_httpx_mock(status_code=500, response_text="Internal error")
+        with (
+            patch("services.transcriber.httpx.AsyncClient", mock_cls),
+            pytest.raises(RuntimeError, match="500"),
+        ):
+            await _call_api("b64data", "ogg")
+
+
+class TestTranscribeAudio:
+    async def test_raises_value_error_without_api_key(self):
+        with (
+            patch("services.transcriber.config.OPENROUTER_API_KEY", ""),
+            pytest.raises(ValueError, match="OPENROUTER_API_KEY"),
+        ):
+            await transcribe_audio(b"audio", "audio/ogg", "test.ogg")
+
+    async def test_returns_title_and_text(self):
+        with (
+            patch("services.transcriber._call_api", new_callable=AsyncMock) as mock_api,
+            patch("services.transcriber.config.OPENROUTER_API_KEY", "sk-test"),
+        ):
+            mock_api.return_value = "TITLE: My Title\nTEXT: My content here."
+            result = await transcribe_audio(b"audio", "audio/ogg", "test.ogg")
+        assert result["title"] == "My Title"
+        assert result["text"] == "My content here."
+
+    async def test_encodes_audio_to_base64(self):
+        captured: dict = {}
+
+        async def fake_call(b64: str, fmt: str) -> str:
+            captured["b64"] = b64
+            captured["fmt"] = fmt
+            return "TITLE: T\nTEXT: X"
+
+        with (
+            patch("services.transcriber._call_api", side_effect=fake_call),
+            patch("services.transcriber.config.OPENROUTER_API_KEY", "sk-test"),
+        ):
+            await transcribe_audio(b"raw audio bytes", "audio/webm", "rec.webm")
+
+        assert captured["b64"] == base64.b64encode(b"raw audio bytes").decode()
+        assert captured["fmt"] == "webm"
+
+    async def test_retries_on_failure_and_succeeds(self):
+        with (
+            patch("services.transcriber._call_api", new_callable=AsyncMock) as mock_api,
+            patch("services.transcriber.config.OPENROUTER_API_KEY", "sk-test"),
+            patch("services.transcriber.asyncio.sleep", new_callable=AsyncMock),
+        ):
+            mock_api.side_effect = [
+                RuntimeError("fail 1"),
+                RuntimeError("fail 2"),
+                "TITLE: OK\nTEXT: Done",
+            ]
+            result = await transcribe_audio(b"audio", "audio/ogg", "test.ogg")
+        assert result["title"] == "OK"
+        assert mock_api.call_count == 3
+
+    async def test_raises_after_all_retries_exhausted(self):
+        with (
+            patch("services.transcriber._call_api", new_callable=AsyncMock) as mock_api,
+            patch("services.transcriber.config.OPENROUTER_API_KEY", "sk-test"),
+            patch("services.transcriber.asyncio.sleep", new_callable=AsyncMock),
+        ):
+            mock_api.side_effect = RuntimeError("API down")
+            with pytest.raises(RuntimeError, match="попытки"):
+                await transcribe_audio(b"audio", "audio/ogg", "test.ogg")
+        assert mock_api.call_count == RETRY_ATTEMPTS
+
+    async def test_no_sleep_on_last_attempt(self):
+        with (
+            patch("services.transcriber._call_api", new_callable=AsyncMock) as mock_api,
+            patch("services.transcriber.config.OPENROUTER_API_KEY", "sk-test"),
+            patch("services.transcriber.asyncio.sleep", new_callable=AsyncMock) as mock_sleep,
+        ):
+            mock_api.side_effect = RuntimeError("fail")
+            with pytest.raises(RuntimeError):
+                await transcribe_audio(b"audio", "audio/ogg", "test.ogg")
+        assert mock_sleep.call_count == RETRY_ATTEMPTS - 1

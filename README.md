@@ -1,123 +1,70 @@
 # Voice Transcriber
 
-Локальное приложение для мгновенной транскрибации голосовых заметок через [OpenRouter](https://openrouter.ai/) + Google Gemini.
-Записывает аудио прямо в браузере, транскрибирует за несколько секунд, сохраняет историю локально.
+[![CI](https://github.com/pyramidheadshark/milvm-stt/actions/workflows/ci.yml/badge.svg)](https://github.com/pyramidheadshark/milvm-stt/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/pyramidheadshark/milvm-stt/graph/badge.svg)](https://codecov.io/gh/pyramidheadshark/milvm-stt)
+[![Release](https://img.shields.io/github/v/release/pyramidheadshark/milvm-stt)](https://github.com/pyramidheadshark/milvm-stt/releases/latest)
 
-Работает как трей-приложение — клик по иконке открывает окно, закрытие скрывает в трей.
+Трей-приложение для Windows: записал голосовую заметку — получил текст с заголовком через несколько секунд.
 
----
-
-## Требования
-
-- Python 3.11+
-- [uv](https://docs.astral.sh/uv/getting-started/installation/)
-- [Ключ OpenRouter API](https://openrouter.ai/keys)
+Работает на [OpenRouter](https://openrouter.ai/) + Google Gemini. Данные хранятся локально, никуда не отправляются кроме аудио на транскрибацию.
 
 ---
 
-## Быстрый старт
+## Возможности
+
+- **Запись прямо в приложении** — через микрофон браузера, без сторонних программ
+- **Загрузка файла** — поддерживаются OGG, MP3, WAV, WebM, M4A, AAC, FLAC (до 25 МБ)
+- **Автоматический заголовок** — модель генерирует краткий заголовок на русском
+- **История и поиск** — все транскрибации сохраняются локально в SQLite, есть полнотекстовый поиск и пагинация
+- **Настройки в приложении** — API ключ и модель меняются без редактирования файлов
+- **Восстановление аудио** — если транскрибация упала, аудиофайл сохраняется и доступен для повторной попытки
+- **Трей** — приложение живёт в системном трее, окно открывается по клику
+
+---
+
+## Установка
+
+### Готовый .exe (Windows)
+
+1. Скачать `VoiceTranscriber.exe` из [Releases](https://github.com/pyramidheadshark/milvm-stt/releases/latest)
+2. Запустить — при первом запуске автоматически откроется панель настроек
+3. Ввести [API ключ OpenRouter](https://openrouter.ai/keys) и нажать Save
+
+Больше ничего не нужно. Данные и настройки хранятся в папке рядом с `.exe`.
+
+### Из исходников
+
+Требования: Python 3.11+, [uv](https://docs.astral.sh/uv/getting-started/installation/)
 
 ```bash
 git clone https://github.com/pyramidheadshark/milvm-stt.git
 cd milvm-stt
-
 uv sync
-cp .env.example .env
-# Открыть .env и указать OPENROUTER_API_KEY
-
-make tray        # трей-приложение (Linux / macOS)
-make run         # только веб-режим (браузер)
-```
-
-**Windows** — скачать `.exe` из [Releases](https://github.com/pyramidheadshark/milvm-stt/releases/latest),
-положить `.env` рядом с `.exe` и запустить.
-
-Или запустить из исходников: `uv run python tray.py`
-
----
-
-## Настройка API ключа
-
-Два способа:
-
-1. **В приложении**: кнопка ⚙ в заголовке → ввести ключ → Save settings (применяется сразу, без перезапуска)
-2. **Через `.env`**: создать `.env` рядом с `.exe`, указать `OPENROUTER_API_KEY=sk-or-v1-...`
-
----
-
-## Переменные `.env`
-
-| Переменная | По умолчанию | Описание |
-|---|---|---|
-| `OPENROUTER_API_KEY` | — | Обязательно. Получить на openrouter.ai/keys |
-| `MODEL` | `google/gemini-2.5-flash-lite-preview-09-2025` | Любая модель OpenRouter с поддержкой аудио |
-| `PORT` | `8000` | Изменить если порт занят |
-| `HOST` | `127.0.0.1` | Не менять без необходимости |
-
----
-
-## Make-команды
-
-```bash
-make setup       # Первоначальная настройка (создаёт .env, ставит зависимости)
-make install     # Установить / синхронизировать зависимости
-make tray        # Запустить трей-приложение (foreground)
-make tray-bg     # Запустить трей-приложение в фоне (Linux / macOS)
-make run         # Веб-режим, открывает браузер
-make dev         # Веб-режим с hot-reload
-make build       # Собрать .exe через PyInstaller
-make clean       # Удалить кэш Python
+uv run python tray.py
 ```
 
 ---
 
-## Сборка исполняемого файла
+## Настройки
 
-```bash
-uv sync
-make build
-# → dist/VoiceTranscriber.exe
+Открыть панель настроек — кнопка **⚙** в заголовке окна.
+
+| Параметр | Описание |
+|---|---|
+| API Key | Ключ OpenRouter. Получить на [openrouter.ai/keys](https://openrouter.ai/keys) |
+| Model | ID модели OpenRouter с поддержкой аудио. По умолчанию — `google/gemini-2.5-flash-lite-preview-09-2025` |
+
+Изменения применяются сразу, без перезапуска.
+
+Альтернативно — через `.env` в папке с `.exe`:
+
+```env
+OPENROUTER_API_KEY=sk-or-v1-...
+MODEL=google/gemini-2.5-flash-lite-preview-09-2025
+PORT=8000
 ```
 
-Готовый `.exe` автоматически публикуется в [GitHub Releases](https://github.com/pyramidheadshark/milvm-stt/releases) при создании тега `v*.*.*`.
-
----
-
-## Архитектура
-
-```
-milvm-stt/
-├── tray.py                  # Точка входа — трей-иконка + окно pywebview
-├── main.py                  # FastAPI — роуты и lifecycle
-├── config.py                # Настройки, write_settings, reload_config
-├── paths.py                 # Разрешение путей (dev vs PyInstaller бандл)
-├── build.py                 # Скрипт сборки PyInstaller
-├── services/
-│   ├── transcriber.py       # Запрос в OpenRouter API + парсинг ответа
-│   └── storage.py           # SQLite + файлы транскрибаций + failed audio
-├── templates/
-│   └── index.html           # Весь UI — vanilla JS + HTMX-стиль, без сборки
-├── assets/
-│   ├── icon.png             # Иконка приложения
-│   └── icon.ico             # Иконка для Windows
-├── tests/                   # 57 тестов, coverage 78%
-├── .github/workflows/
-│   ├── ci.yml               # ruff + mypy + pytest на каждый push
-│   └── release.yml          # Сборка .exe и публикация релиза на тег v*.*.*
-├── pyproject.toml           # Зависимости (uv)
-└── Makefile
-```
-
-**Стек:** FastAPI · pywebview · pystray · aiosqlite · httpx · Jinja2 · uv
-
-**Как работает транскрибация:**
-
-1. Браузер записывает аудио через `MediaRecorder API` (WebM/Opus) или принимает загруженный файл
-2. FastAPI получает файл через `multipart/form-data`, проверяет размер (макс. 25 МБ)
-3. Аудио кодируется в `base64` и отправляется в OpenRouter с типом `input_audio`
-4. Gemini возвращает русский заголовок + дословную транскрибацию
-5. Сохраняется в SQLite, отображается в UI с поиском и пагинацией
-6. При ошибке API: аудио сохраняется как `FAILED_*.ogg` — можно скачать из UI
+Список моделей с поддержкой аудио: [openrouter.ai/models?input_modalities=audio](https://openrouter.ai/models?fmt=cards&input_modalities=audio)
 
 ---
 
@@ -125,12 +72,75 @@ milvm-stt/
 
 Модель по умолчанию: `google/gemini-2.5-flash-lite-preview-09-2025`
 
-| | Цена |
+| Тип токенов | Цена |
 |---|---|
-| Аудио токены | $0.30 / 1M |
-| Выходные токены | $0.40 / 1M |
+| Аудио | $0.30 / 1M |
+| Текст (выход) | $0.40 / 1M |
 
-Голосовая заметка 1–2 минуты обходится примерно в **$0.001–0.003**.
+Заметка 1–2 минуты ≈ **$0.001–0.003**. При активном использовании (20 заметок/день) — около **$1–2 в месяц**.
 
-Работает любая модель OpenRouter с поддержкой аудио — указать в `MODEL` в `.env` или через настройки в приложении.
-Список моделей: [openrouter.ai/models?input_modalities=audio](https://openrouter.ai/models?fmt=cards&input_modalities=audio)
+---
+
+## Разработка
+
+```bash
+uv sync
+make dev          # веб-режим с hot-reload
+make tray         # трей-приложение
+make build        # собрать .exe
+```
+
+Полный список команд: `make help`
+
+### Тесты
+
+```bash
+uv run pytest --cov=. -q
+```
+
+81 тест, покрытие 95%. CI запускается на каждый push: ruff + mypy + pytest.
+
+### Релиз
+
+```bash
+git tag v0.X.Y && git push origin v0.X.Y
+```
+
+GitHub Actions автоматически соберёт `.exe` и опубликует GitHub Release.
+
+Правила версий: `PATCH` — фиксы и мелкие улучшения, `MINOR` — новые фичи, `MAJOR` — breaking changes.
+
+---
+
+## Архитектура
+
+```
+├── tray.py              # точка входа — системный трей + окно pywebview
+├── main.py              # FastAPI: все эндпоинты
+├── config.py            # конфигурация, write_settings, reload_config
+├── paths.py             # разрешение путей (dev / PyInstaller bundle)
+├── services/
+│   ├── transcriber.py   # OpenRouter API, retry, парсинг ответа
+│   └── storage.py       # SQLite, история, failed audio
+├── templates/
+│   └── index.html       # весь UI — vanilla JS, без сборки
+├── assets/              # иконки
+├── tests/               # 81 тест
+└── .github/workflows/
+    ├── ci.yml           # lint + typecheck + test
+    └── release.yml      # build .exe → GitHub Release
+```
+
+**Стек:** FastAPI · pywebview · pystray · aiosqlite · httpx · Jinja2 · uv · PyInstaller
+
+**Поток транскрибации:**
+
+```
+микрофон → MediaRecorder (WebM/Opus)
+         → POST /transcribe
+         → base64 + input_audio → OpenRouter API
+         → парсинг TITLE / TEXT
+         → SQLite + возврат в UI
+```
+
+При ошибке API аудио сохраняется как `FAILED_*.ogg` — доступно для скачивания из UI.

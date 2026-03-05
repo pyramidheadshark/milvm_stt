@@ -684,6 +684,7 @@
         st.style.color = 'var(--green)';
         document.getElementById('settings-api-key').value = '';
         loadSettings();
+        setTimeout(() => { if (settingsOpen) toggleSettings(); }, 800);
       } else {
         const d = await resp.json();
         st.textContent = d.detail || 'Error saving';
@@ -1043,6 +1044,14 @@
   });
 
   initHistory();
+
+  (async () => {
+    try {
+      const resp = await fetch('/settings');
+      const data = await resp.json();
+      if (!data.api_key_set) toggleSettings();
+    } catch (_) {}
+  })();
 </script>
 </body>
 </html>
