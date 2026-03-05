@@ -1,13 +1,15 @@
-from dotenv import load_dotenv
-from paths import DOTENV_PATH
 import os
+
+from dotenv import load_dotenv
+
+from paths import DOTENV_PATH
 
 load_dotenv(DOTENV_PATH)
 
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")
 MODEL = os.getenv("MODEL", "google/gemini-2.5-flash-lite-preview-09-2025")
-HOST  = os.getenv("HOST", "0.0.0.0")
-PORT  = int(os.getenv("PORT", "8000"))
+HOST = os.getenv("HOST", "0.0.0.0")
+PORT = int(os.getenv("PORT", "8000"))
 
 TRANSCRIBE_PROMPT = """Ты — ассистент для транскрибации аудио.
 
@@ -33,14 +35,14 @@ TITLE: <заголовок на русском>
 TEXT: <транскрибация>"""
 
 SUPPORTED_FORMATS = {
-    "audio/ogg":  "ogg",
+    "audio/ogg": "ogg",
     "audio/mpeg": "mp3",
-    "audio/mp3":  "mp3",
-    "audio/wav":  "wav",
-    "audio/x-wav":"wav",
+    "audio/mp3": "mp3",
+    "audio/wav": "wav",
+    "audio/x-wav": "wav",
     "audio/webm": "webm",
-    "audio/mp4":  "mp4",
-    "audio/m4a":  "m4a",
-    "audio/aac":  "aac",
+    "audio/mp4": "mp4",
+    "audio/m4a": "m4a",
+    "audio/aac": "aac",
     "audio/flac": "flac",
 }

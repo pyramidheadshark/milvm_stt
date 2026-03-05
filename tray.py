@@ -1,30 +1,32 @@
-import threading
-import time
-import sys
+import contextlib
 import os
 import socket
+import sys
+import threading
+import time
+
+import pystray
 import uvicorn
 import webview
-import pystray
 from PIL import Image
 
 from paths import ASSETS_DIR
 
 APP_TITLE = "Voice Transcriber"
-PORT      = int(os.getenv("PORT", "8000"))
-HOST      = "127.0.0.1"
-WIN_W     = 420
-WIN_H     = 680
-MARGIN    = 16
+PORT = int(os.getenv("PORT", "8000"))
+HOST = "127.0.0.1"
+WIN_W = 420
+WIN_H = 680
+MARGIN = 16
 TASKBAR_H = 48
 
 ICON_PNG = os.path.join(ASSETS_DIR, "icon.png")
 ICON_ICO = os.path.join(ASSETS_DIR, "icon.ico")
 
 _window: webview.Window | None = None
-_icon:   pystray.Icon   | None = None
+_icon: pystray.Icon | None = None
 _server: uvicorn.Server | None = None
-_hwnd:   int = 0
+_hwnd: int = 0
 _screen_w: int = 1920
 _screen_h: int = 1080
 
@@ -38,16 +40,13 @@ class WindowApi:
 def _set_window_pos(x: int, y: int, w: int, h: int) -> None:
     if sys.platform == "win32" and _hwnd:
         import ctypes
-        SWP_NOZORDER   = 0x0004
+
+        SWP_NOZORDER = 0x0004
         SWP_NOACTIVATE = 0x0010
-        ctypes.windll.user32.SetWindowPos(
-            _hwnd, 0, x, y, w, h,
-            SWP_NOZORDER | SWP_NOACTIVATE
-        )
+        ctypes.windll.user32.SetWindowPos(_hwnd, 0, x, y, w, h, SWP_NOZORDER | SWP_NOACTIVATE)
     elif _window:
         threading.Thread(
-            target=lambda: (_window.resize(w, h), time.sleep(0.1), _window.move(x, y)),
-            daemon=True
+            target=lambda: (_window.resize(w, h), time.sleep(0.1), _window.move(x, y)), daemon=True
         ).start()
 
 
@@ -66,6 +65,7 @@ def _anchor(window: webview.Window) -> None:
 
     if sys.platform == "win32":
         import ctypes
+
         _hwnd = ctypes.windll.user32.FindWindowW(None, APP_TITLE) or 0
 
     x = _screen_w - WIN_W - MARGIN
@@ -77,6 +77,7 @@ def _load_tray_icon() -> Image.Image:
     if os.path.exists(ICON_PNG):
         return Image.open(ICON_PNG).convert("RGBA").resize((64, 64), Image.LANCZOS)
     from PIL import ImageDraw
+
     img = Image.new("RGBA", (64, 64), (0, 0, 0, 0))
     ImageDraw.Draw(img).ellipse([0, 0, 63, 63], fill="#7c6dfa")
     return img
@@ -94,10 +95,8 @@ def _find_free_port(preferred: int) -> int:
 def _start_server(port: int) -> None:
     global _server
     from main import app
-    config = uvicorn.Config(
-        app=app, host=HOST, port=port,
-        log_level="warning", lifespan="on"
-    )
+
+    config = uvicorn.Config(app=app, host=HOST, port=port, log_level="warning", lifespan="on")
     _server = uvicorn.Server(config)
     _server.run()
 
@@ -117,10 +116,8 @@ def _shutdown() -> None:
     if _server:
         _server.should_exit = True
     if _icon:
-        try:
+        with contextlib.suppress(Exception):
             _icon.stop()
-        except Exception:
-            pass
     time.sleep(0.3)
     os._exit(0)
 
@@ -132,10 +129,8 @@ def on_tray_open(icon=None, item=None):
 
 def on_tray_exit(icon, item):
     if _window:
-        try:
+        with contextlib.suppress(Exception):
             _window.destroy()
-        except Exception:
-            pass
     threading.Thread(target=_shutdown, daemon=True).start()
 
 
@@ -148,7 +143,7 @@ def main() -> None:
     global _window, _icon
 
     port = _find_free_port(PORT)
-    url  = f"http://{HOST}:{port}/?mode=app"
+    url = f"http://{HOST}:{port}/?mode=app"
 
     threading.Thread(target=_start_server, args=(port,), daemon=True).start()
 
@@ -157,17 +152,17 @@ def main() -> None:
         os._exit(1)
 
     _window = webview.create_window(
-        title     = APP_TITLE,
-        url       = url,
-        width     = WIN_W,
-        height    = WIN_H,
-        x         = 100,
-        y         = 100,
-        resizable = False,
-        frameless = True,
-        on_top    = True,
-        shadow    = True,
-        js_api    = WindowApi(),
+        title=APP_TITLE,
+        url=url,
+        width=WIN_W,
+        height=WIN_H,
+        x=100,
+        y=100,
+        resizable=False,
+        frameless=True,
+        on_top=True,
+        shadow=True,
+        js_api=WindowApi(),
     )
     _window.events.closing += on_window_closing
 
@@ -177,13 +172,10 @@ def main() -> None:
         pystray.Menu.SEPARATOR,
         pystray.MenuItem("Exit", on_tray_exit),
     )
-    _icon = pystray.Icon(APP_TITLE, tray_image, APP_TITLE, menu,
-                         on_activate=on_tray_open)
+    _icon = pystray.Icon(APP_TITLE, tray_image, APP_TITLE, menu, on_activate=on_tray_open)
     if os.path.exists(ICON_ICO):
-        try:
+        with contextlib.suppress(Exception):
             _icon.icon = Image.open(ICON_ICO)
-        except Exception:
-            pass
 
     threading.Thread(target=_icon.run, daemon=True).start()
 
