@@ -55,7 +55,7 @@ def _set_window_pos(x: int, y: int, w: int, h: int) -> None:
         threading.Thread(target=_reposition, daemon=True).start()
 
 
-def _anchor(window: webview.Window) -> None:
+def _anchor() -> None:
     global _screen_w, _screen_h, _hwnd
 
     time.sleep(0.15)

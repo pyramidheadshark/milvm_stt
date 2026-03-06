@@ -684,6 +684,7 @@
         st.style.color = 'var(--green)';
         document.getElementById('settings-api-key').value = '';
         loadSettings();
+        setTimeout(() => { if (settingsOpen) toggleSettings(); }, 800);
       } else {
         const d = await resp.json();
         st.textContent = d.detail || 'Error saving';
