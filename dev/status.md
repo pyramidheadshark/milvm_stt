@@ -17,12 +17,11 @@ Desktop tray-приложение для транскрибации голосо
 - [x] Phase 0: Intake & Requirements
 - [ ] Phase 1: Design Document
 - [x] Phase 2: Environment Setup
-- [x] Phase 3: Development Loop (v0.3.0, повреждён)
-- [ ] Phase 4: API Layer & Testing
-- [ ] Phase 5: CI/CD
-- [ ] Phase 6: Deploy
+- [x] Phase 3: Development Loop (v0.3.0, повреждён — восстановлен)
+- [x] Phase 4: UI/UX улучшения — ЗАВЕРШЁН
+- [ ] Phase 5: Deploy (push to remote, tag release)
 
-**Active phase**: Phase 4 — UI/UX улучшения
+**Active phase**: Phase 5 — публикация релиза
 
 ---
 
@@ -30,9 +29,10 @@ Desktop tray-приложение для транскрибации голосо
 
 Tasks in priority order. Check off when done.
 
-- [ ] Phase 4: UI/UX улучшения (обсудить с пользователем)
+- [ ] Push to remote + создать тег v0.4.0 → GitHub Actions соберёт .exe и опубликует релиз
 
 **Completed (most recent first):**
+- [x] Phase 4: settings UI, failed audio recovery, compact UI, release pipeline — 3ce90ff — 2026-03-06
 - [x] Phase 3: validate_config, PORT fix in tray, mypy clean, 45/45 тестов — cda1bb9 — 2026-03-06
 - [x] Phase 1: CI исправлен, тесты 42/42, coverage 87.8%, ruff+mypy чистые — ec002aa — 2026-03-06
 - [x] Phase 0: cleanup — удалены битые артефакты, зафиксированы .github/ и dev/ — e67691b — 2026-03-06
@@ -40,18 +40,19 @@ Tasks in priority order. Check off when done.
 
 ---
 
-## Known Issues and Solutions
+## Phase 4 Deliverables
 
-### P0-проблемы из аудита (требуют fix в Phase 1)
+All 7 issues addressed in commit 3ce90ff:
 
-**CI сломан**: `ci.yml` запускает `mypy src/` и `pytest --cov=src` — папки `src/` нет, структура плоская.
-**Нет dev-зависимостей**: `pyproject.toml` dev group содержит только `pyinstaller`. Нет ruff, mypy, pytest.
+1. **Failed audio recovery** — FAILED_*.ogg сохраняется при 502; эндпоинты /failed-audio + /failed-audio/{filename}; frontend показывает ссылку "Download audio"
+2. **Artifact regex** — расширен: могу помочь, надеюсь, glad/hope this helps, best regards и др.
+3. **Tray sluggishness** — убран лишний поток в hide_window; `_window.hide()` вызывается напрямую
+4. **GitHub Release pipeline** — `.github/workflows/release.yml`; триггер `v*.*.*` → build .exe → GitHub Release
+5. **In-app settings** — панель с API key + model; POST /settings с hot-reload через reload_config()
+6. **Compact UI** — уменьшены отступы, кнопка записи 66→58px, visualizer 88→78px
+7. **Styled scrollbar** — 4px thin scrollbar вместо скрытого
 
-### P1-проблемы (Phase 3)
-
-- `HOST = "0.0.0.0"` в config.py — должен быть `127.0.0.1` для desktop app
-- `PORT` дублируется в `tray.py` без импорта из `config.py`
-- Нет валидации `OPENROUTER_API_KEY` при старте приложения
+Tests: **57/57**, coverage **78%**
 
 ---
 
@@ -65,14 +66,16 @@ Tasks in priority order. Check off when done.
 | Storage | SQLite via aiosqlite | initial |
 | Packaging | PyInstaller → .exe | initial |
 | Tray | pystray + pillow | initial |
+| Config hot-reload | write_settings() → .env → reload_config() с global vars | 2026-03-06 |
+| Patch target in tests | `main.X` not `module.X` when main uses `from module import X` | 2026-03-06 |
 
 ---
 
-## Next Session Plan
+## Known Gotchas
 
-1. Phase 3: HOST/PORT — убрать дублирование в tray.py, 0.0.0.0→127.0.0.1
-2. Phase 3: Startup валидация API key
-3. Phase 4: UI/UX — обсудить с пользователем конкретные улучшения
+- `patch("module.write_settings")` не работает если `main.py` делает `from module import write_settings` — патчить `"main.write_settings"`
+- `transcriber.py` обращается к `config.OPENROUTER_API_KEY` через модуль (не import) для hot-reload поддержки
+- `services/__init__.py` нужен чтобы mypy не видел services/storage.py дважды
 
 ---
 
@@ -80,13 +83,16 @@ Tasks in priority order. Check off when done.
 
 | File | Purpose |
 |------|---------|
-| `main.py` | Entry point: запускает FastAPI + uvicorn + tray |
-| `config.py` | Конфигурация: API keys, пути, настройки |
-| `paths.py` | Резолвинг путей (особенно для PyInstaller) |
-| `services/` | Бизнес-логика: transcription, storage |
-| `templates/` | Jinja2 HTML-шаблоны для PyWebView |
+| `main.py` | FastAPI app: все эндпоинты |
+| `config.py` | Конфигурация + write_settings + reload_config |
+| `paths.py` | Резолвинг путей (PyInstaller MEIPASS) |
+| `services/transcriber.py` | OpenRouter API вызов + парсинг ответа |
+| `services/storage.py` | SQLite + файловое хранилище |
+| `templates/index.html` | UI: запись, история, поиск, настройки |
 | `tray.py` | Системный трей (pystray) |
 | `build.py` | PyInstaller build script |
+| `.github/workflows/ci.yml` | CI: ruff + mypy + pytest |
+| `.github/workflows/release.yml` | Release: build .exe на тег v*.*.* |
 | `dist/` | Готовые .exe — НЕ УДАЛЯТЬ |
 
 ---
