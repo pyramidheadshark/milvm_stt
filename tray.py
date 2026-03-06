@@ -34,7 +34,7 @@ _screen_h: int = 1080
 class WindowApi:
     def hide_window(self):
         if _window:
-            threading.Thread(target=_window.hide, daemon=True).start()
+            _window.hide()
 
 
 def _set_window_pos(x: int, y: int, w: int, h: int) -> None:

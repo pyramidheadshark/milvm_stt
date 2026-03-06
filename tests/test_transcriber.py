@@ -120,6 +120,30 @@ class TestCleanText:
         assert "Feel free" not in result
         assert "Main text" in result
 
+    def test_removes_mogu_pomoch(self):
+        text = "Полезная запись встречи.\n\nМогу с чем-то ещё помочь?"
+        result = _clean_text(text)
+        assert "Могу" not in result
+        assert "Полезная запись" in result
+
+    def test_removes_nadeius(self):
+        text = "Текст заметки.\n\nНадеюсь, это было полезно!"
+        result = _clean_text(text)
+        assert "Надеюсь" not in result
+        assert "Текст заметки" in result
+
+    def test_removes_hope_this_helps(self):
+        text = "Meeting notes.\n\nHope this helps!"
+        result = _clean_text(text)
+        assert "Hope" not in result
+        assert "Meeting notes" in result
+
+    def test_removes_glad_to_help(self):
+        text = "Project update.\n\nGlad to help with anything else!"
+        result = _clean_text(text)
+        assert "Glad" not in result
+        assert "Project update" in result
+
     def test_clean_text_unchanged(self):
         text = "Просто обычный текст без артефактов."
         assert _clean_text(text) == text

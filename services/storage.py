@@ -97,6 +97,25 @@ async def save_failed_audio(audio_bytes: bytes, filename: str) -> str:
     return path
 
 
+def list_failed_audio() -> list[dict]:
+    if not os.path.exists(TRANSCRIPTS_DIR):
+        return []
+    result = []
+    for name in sorted(os.listdir(TRANSCRIPTS_DIR), reverse=True):
+        if name.startswith("FAILED_"):
+            path = os.path.join(TRANSCRIPTS_DIR, name)
+            size_kb = round(os.path.getsize(path) / 1024, 1)
+            result.append({"filename": name, "size_kb": size_kb})
+    return result
+
+
+def get_failed_audio_path(filename: str) -> str | None:
+    if not os.path.exists(TRANSCRIPTS_DIR):
+        return None
+    path = os.path.join(TRANSCRIPTS_DIR, os.path.basename(filename))
+    return path if os.path.exists(path) else None
+
+
 def _safe_name(name: str) -> str:
     safe = "".join(c if c.isalnum() or c in " -_" else "" for c in name)
     return safe.strip().replace(" ", "_")[:50]

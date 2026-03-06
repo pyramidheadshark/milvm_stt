@@ -45,6 +45,50 @@ def validate_config() -> None:
         )
 
 
+def reload_config() -> None:
+    global OPENROUTER_API_KEY, MODEL, _REQUIRED
+    load_dotenv(DOTENV_PATH, override=True)
+    OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")
+    MODEL = os.getenv("MODEL", "google/gemini-2.5-flash-lite-preview-09-2025")
+    _REQUIRED = {"OPENROUTER_API_KEY": OPENROUTER_API_KEY}
+
+
+def write_settings(api_key: str, model: str) -> None:
+    updates: dict[str, str] = {}
+    if api_key:
+        updates["OPENROUTER_API_KEY"] = api_key
+    if model:
+        updates["MODEL"] = model
+    if not updates:
+        return
+
+    lines: list[str] = []
+    if os.path.exists(DOTENV_PATH):
+        with open(DOTENV_PATH, encoding="utf-8") as f:
+            lines = f.readlines()
+
+    updated_keys: set[str] = set()
+    new_lines: list[str] = []
+    for line in lines:
+        stripped = line.strip()
+        if stripped and not stripped.startswith("#") and "=" in stripped:
+            key = stripped.split("=", 1)[0].strip()
+            if key in updates:
+                new_lines.append(f"{key}={updates[key]}\n")
+                updated_keys.add(key)
+                continue
+        new_lines.append(line)
+
+    for key, val in updates.items():
+        if key not in updated_keys:
+            new_lines.append(f"{key}={val}\n")
+
+    with open(DOTENV_PATH, "w", encoding="utf-8") as f:
+        f.writelines(new_lines)
+
+    reload_config()
+
+
 SUPPORTED_FORMATS = {
     "audio/ogg": "ogg",
     "audio/mpeg": "mp3",

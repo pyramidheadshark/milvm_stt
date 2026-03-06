@@ -4,7 +4,8 @@ import re
 
 import httpx
 
-from config import MODEL, OPENROUTER_API_KEY, SUPPORTED_FORMATS, TRANSCRIBE_PROMPT
+import config
+from config import SUPPORTED_FORMATS, TRANSCRIBE_PROMPT
 
 RETRY_ATTEMPTS = 3
 RETRY_DELAY = 2.0
@@ -22,8 +23,16 @@ _ARTIFACT_PREFIX = re.compile(
 
 _ARTIFACT_SUFFIX = re.compile(
     r"\n+(?:"
-    r"(?:если|если\s+у\s+вас|обращайтесь|не\s+стесняйтесь|рад\s+помочь)|"
-    r"(?:if\s+you\s+(?:need|have)|feel\s+free|let\s+me\s+know|happy\s+to\s+help)"
+    r"(?:могу\s+(?:с\s+чем.то\s+)?(?:ещё\s+)?помочь)|"
+    r"(?:если|если\s+у\s+вас|обращайтесь|не\s+стесняйтесь)|"
+    r"(?:рад\s+(?:был\s+)?помочь|буду\s+рад)|"
+    r"(?:надеюсь[,\s]|успехов[!.]|удачи[!.]|хорошего\s+дня)|"
+    r"(?:если\s+(?:возникнут|есть|появятся)\s+вопросы?)|"
+    r"(?:если\s+что.то\s+непонятно)|"
+    r"(?:пожалуйста[,\s]+обращайтесь)|"
+    r"(?:if\s+you\s+(?:need|have|want)|feel\s+free|let\s+me\s+know)|"
+    r"(?:happy\s+to\s+help|glad\s+to\s+help|hope\s+(?:this|that)\s+helps?)|"
+    r"(?:best\s+(?:of\s+luck|regards)|good\s+luck)"
     r")[\s\S]*$",
     re.IGNORECASE,
 )
@@ -88,7 +97,7 @@ def _parse_response(raw: str) -> tuple[str, str]:
 
 async def _call_api(audio_b64: str, audio_format: str) -> str:
     payload = {
-        "model": MODEL,
+        "model": config.MODEL,
         "messages": [
             {
                 "role": "user",
@@ -106,7 +115,7 @@ async def _call_api(audio_b64: str, audio_format: str) -> str:
         response = await client.post(
             "https://openrouter.ai/api/v1/chat/completions",
             headers={
-                "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+                "Authorization": f"Bearer {config.OPENROUTER_API_KEY}",
                 "Content-Type": "application/json",
                 "HTTP-Referer": "https://github.com/voice-transcriber",
                 "X-Title": "Voice Transcriber",
@@ -119,7 +128,7 @@ async def _call_api(audio_b64: str, audio_format: str) -> str:
 
 
 async def transcribe_audio(audio_bytes: bytes, content_type: str, filename: str) -> dict:
-    if not OPENROUTER_API_KEY:
+    if not config.OPENROUTER_API_KEY:
         raise ValueError("OPENROUTER_API_KEY не задан в .env")
 
     audio_format = _detect_format(content_type, filename)
