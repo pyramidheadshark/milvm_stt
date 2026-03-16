@@ -1,8 +1,8 @@
 # Voice Transcriber
 
-[![CI](https://github.com/pyramidheadshark/milvm-stt/actions/workflows/ci.yml/badge.svg)](https://github.com/pyramidheadshark/milvm-stt/actions/workflows/ci.yml)
-[![codecov](https://codecov.io/gh/pyramidheadshark/milvm-stt/graph/badge.svg)](https://codecov.io/gh/pyramidheadshark/milvm-stt)
-[![Release](https://img.shields.io/github/v/release/pyramidheadshark/milvm-stt)](https://github.com/pyramidheadshark/milvm-stt/releases/latest)
+[![CI](https://github.com/pyramidheadshark/milvm_stt/actions/workflows/ci.yml/badge.svg)](https://github.com/pyramidheadshark/milvm_stt/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/pyramidheadshark/milvm_stt/graph/badge.svg)](https://codecov.io/gh/pyramidheadshark/milvm_stt)
+[![Release](https://img.shields.io/github/v/release/pyramidheadshark/milvm_stt)](https://github.com/pyramidheadshark/milvm_stt/releases/latest)
 
 Трей-приложение для Windows: записал голосовую заметку — получил текст с заголовком через несколько секунд.
 
@@ -26,7 +26,7 @@
 
 ### Готовый .exe (Windows)
 
-1. Скачать `VoiceTranscriber.exe` из [Releases](https://github.com/pyramidheadshark/milvm-stt/releases/latest)
+1. Скачать `VoiceTranscriber.exe` из [Releases](https://github.com/pyramidheadshark/milvm_stt/releases/latest)
 2. Запустить — при первом запуске автоматически откроется панель настроек
 3. Ввести [API ключ OpenRouter](https://openrouter.ai/keys) и нажать Save
 
@@ -37,8 +37,8 @@
 Требования: Python 3.11+, [uv](https://docs.astral.sh/uv/getting-started/installation/)
 
 ```bash
-git clone https://github.com/pyramidheadshark/milvm-stt.git
-cd milvm-stt
+git clone https://github.com/pyramidheadshark/milvm_stt.git
+cd milvm_stt
 uv sync
 uv run python tray.py
 ```
